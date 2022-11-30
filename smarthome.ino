@@ -1,5 +1,6 @@
 #include <ESP8266WiFi.h>
 #include <FirebaseArduino.h>
+#include "max6675.h"
 
 //Firebase settings
 #define FIREBASE_HOST "esp8266-firebase-lamp-default-rtdb.asia-southeast1.firebasedatabase.app"
@@ -10,14 +11,21 @@
 #define WIFI_PASSWORD "dronejammer21"
 
 //lamp & ultrasonic 1
-constexpr uint8_t lamp1 = D3;  
-constexpr uint8_t trigPinUS1 = D1;  
-constexpr uint8_t echoPinUS1 = D2;  
+constexpr uint8_t trigPinUS1 = D0;  
+constexpr uint8_t echoPinUS1 = D1;  
+constexpr uint8_t lamp1 = D2;  
 
-//ultrasonic 2
-constexpr uint8_t lamp2 = D4;
-constexpr uint8_t trigPinUS2 = D5;  
-constexpr uint8_t echoPinUS2 = D6;  
+//lamp & ultrasonic 2
+constexpr uint8_t trigPinUS2 = D3;  
+constexpr uint8_t echoPinUS2 = D4;  
+constexpr uint8_t lamp2 = D5;
+
+//temp sensor
+constexpr uint8_t soPin = D8;  
+constexpr uint8_t csPin = D7;  
+constexpr uint8_t sckPin = D6;  
+
+MAX6675 thermocouple(sckPin, csPin, soPin);
 
 //mode
 String lampMode1 = "remote";
@@ -65,12 +73,14 @@ void setup()
 void loop()
 {
   lampAuto(1);
-
   lampAuto(2);
   // getDistance(2);
   // Serial.println(distance);
   // delay(500);
   // autoLamp();
+  Serial.print("C = "); 
+  Serial.println(thermocouple.readCelsius());
+  delay(1000)
 }
 
 double getDistance(int i)
