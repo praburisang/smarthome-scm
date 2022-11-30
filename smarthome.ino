@@ -20,6 +20,9 @@ constexpr uint8_t trigPinUS2 = D3;
 constexpr uint8_t echoPinUS2 = D4;  
 constexpr uint8_t lamp2 = D5;
 
+uint8_t trigPinUS;
+uint8_t echoPinUS;  
+
 //temp sensor
 constexpr uint8_t soPin = D8;  
 constexpr uint8_t csPin = D7;  
@@ -60,6 +63,9 @@ void setup()
     Firebase.begin(FIREBASE_HOST, FIREBASE_AUTH);
     Firebase.setString("lampMode1", lampMode1);
     Firebase.setInt("statusLamp1", 0);
+    Firebase.setString("lampMode2", lampMode1);
+    Firebase.setInt("statusLamp2", 0);
+    Firebase.setInt("temperature", 0);
     // Ultrasonic sensor, set echo as Input and trigger as Output
     pinMode(lamp1, OUTPUT);
     pinMode(lamp2, OUTPUT);
@@ -74,52 +80,36 @@ void loop()
 {
   lampAuto(1);
   lampAuto(2);
-  // getDistance(2);
-  // Serial.println(distance);
-  // delay(500);
-  // autoLamp();
-  Serial.print("C = "); 
-  Serial.println(thermocouple.readCelsius());
-  delay(1000)
+  temp();
+  delay(1000);
 }
 
 double getDistance(int i)
 {
     duration = 0;
     distance = 0;
-    if (i == 1) {
-      // Clear trigPin
-      digitalWrite(trigPinUS1, LOW);
+    if (i == 1){
+      trigPinUS = D0;
+      echoPinUS = D1;
+    } else if (i == 2){
+      trigPinUS = D3;
+      echoPinUS = D4;
+    }
+    // Clear trigPin
+      digitalWrite(trigPinUS, LOW);
       delayMicroseconds(2);
   
       // trigPin HIGH por 10ms
-      digitalWrite(trigPinUS1, HIGH);
+      digitalWrite(trigPinUS, HIGH);
       delayMicroseconds(10);
-      digitalWrite(trigPinUS1, LOW);
+      digitalWrite(trigPinUS, LOW);
   
       //Reads echoPin, returns the travel time of the sound wave in ms
-      duration = pulseIn(echoPinUS1, HIGH);
-  
-      // Calculating the distance, in centimeters, using the formula described in the first section.
-      distance = duration * 0.034 / 2;    
-      return distance; 
-    } else {
-      // Clear trigPin
-      digitalWrite(trigPinUS2, LOW);
-      delayMicroseconds(2);
-  
-      // trigPin HIGH por 10ms
-      digitalWrite(trigPinUS2, HIGH);
-      delayMicroseconds(10);
-      digitalWrite(trigPinUS2, LOW);
-  
-      //Reads echoPin, returns the travel time of the sound wave in ms
-      duration = pulseIn(echoPinUS2, HIGH);
+      duration = pulseIn(echoPinUS, HIGH);
   
       // Calculating the distance, in centimeters, using the formula described in the first section.
       distance = duration * 0.034 / 2;    
       return distance;
-    }
 }
 String lampMode;
 int statusLamp;
@@ -133,11 +123,11 @@ void lampAuto(int i){
   if (i == 1){
     fbMode = "lampMode1";
     fbStatus = "statusLamp1";
-    lampNum = D3;
+    lampNum = D2;
   } else if (i == 2){
     fbMode = "lampMode2";
     fbStatus = "statusLamp2";
-    lampNum = D4;
+    lampNum = D5;
   }
 
   lampMode = Firebase.getString(fbMode);
@@ -171,14 +161,9 @@ void lampAuto(int i){
 
 }
 
-void autoLamp() {
-  lampNum = D3;
-  Serial.println(distance);
-  getDistance(1);
-  if (distance < 99){
-    digitalWrite(lampNum, HIGH);
-  } else {
-    digitalWrite(lampNum, LOW);
-  }
-   delay(1000);
+void temp(){
+  int celcius = thermocouple.readCelsius(); 
+  Serial.print("C = "); 
+  Serial.println(celcius);
+  Firebase.setInt("temperature", celcius);
 }
