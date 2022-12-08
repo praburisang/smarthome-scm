@@ -1,6 +1,11 @@
+#include <IRac.h>
+#include <IRremoteESP8266.h>
+#include <IRsend.h>
+#include <ir_Samsung.h>
+
 #include <ESP8266WiFi.h>
 #include <FirebaseArduino.h>
-#include "max6675.h"
+#include <max6675.h>
 
 //Firebase settings
 #define FIREBASE_HOST "esp8266-firebase-lamp-default-rtdb.asia-southeast1.firebasedatabase.app"
@@ -43,6 +48,12 @@ long duration = 0;
 // Define the distance variable
 double distance = 0;
 
+// ir sensor
+constexpr uint8_t irPin = D6;
+IRSamsungAc ac(irPin);
+int statusAc = 0;
+int p = 1;
+
 void setup()
 {
     Serial.begin(9600);
@@ -54,7 +65,7 @@ void setup()
     {
         Serial.print(".");
         delay(500);
-    }
+    }[[]]
     Serial.println();
     Serial.print("Connected to: ");
     Serial.println(WiFi.localIP());
@@ -63,9 +74,10 @@ void setup()
     Firebase.begin(FIREBASE_HOST, FIREBASE_AUTH);
     Firebase.setString("lampMode1", lampMode1);
     Firebase.setInt("statusLamp1", 0);
-    Firebase.setString("lampMode2", lampMode1);
+    Firebase.setString("lampMode2", lampMode2);
     Firebase.setInt("statusLamp2", 0);
     Firebase.setInt("temperature", 0);
+
     // Ultrasonic sensor, set echo as Input and trigger as Output
     pinMode(lamp1, OUTPUT);
     pinMode(lamp2, OUTPUT);
@@ -74,13 +86,26 @@ void setup()
 
     pinMode(trigPinUS2, OUTPUT);
     pinMode(echoPinUS2, INPUT);
+
+    // init ir
+    ac.begin();
+    Firebase.setInt("statusAc", statusAc);
+    Firebase.setInt("p",p);
 }
 
 void loop()
 {
-  lampAuto(1);
-  lampAuto(2);
-  temp();
+  // lampAuto(1);
+  // lampAuto(2);
+  // temp();
+  p = Firebase.getInt("p");
+  if (p == 0){
+    irRemote();
+    p++;
+    Firebase.setInt("p", p);
+    Serial.print("p : ");
+    Serial.println(p);
+  }
   delay(1000);
 }
 
@@ -166,4 +191,22 @@ void temp(){
   Serial.print("C = "); 
   Serial.println(celcius);
   Firebase.setInt("temperature", celcius);
+}
+
+void irRemote(){
+  // turning on & off ac
+  statusAc = Firebase.getInt("statusAc");
+  if (statusAc == 1){
+    Serial.println("Turn on the A/C ...");
+    ac.on();
+    ac.setTemp(19);
+    ac.setMode(kSamsungAcCool);
+    ac.setFan(kSamsungAcFanHigh);
+    ac.send();
+  } else if (statusAc == 0){
+    Serial.println("Turn off the A/C ...");
+    ac.off();
+    ac.send();
+  }
+  
 }
