@@ -7,6 +7,22 @@
 #include <FirebaseArduino.h>
 #include <max6675.h>
 
+#include <NTPClient.h>
+#include <WiFiUdp.h>
+
+// Define NTP Client to get time
+WiFiUDP ntpUDP;
+NTPClient timeClient(ntpUDP, "pool.ntp.org");
+
+// Variable to save current epoch time
+unsigned long epochTime;
+
+int getTime() {
+  timeClient.update();
+  int now = timeClient.getEpochTime();
+  return now;
+}
+
 //Firebase settings
 #define FIREBASE_HOST "esp8266-firebase-lamp-default-rtdb.asia-southeast1.firebasedatabase.app"
 #define FIREBASE_AUTH "Vra7IVCbzWMhz2dSACfl2QjX9gH2qoe7BFKHFv4P"
@@ -43,6 +59,10 @@ String lampMode2 = "remote";
 int statusLamp1 = 0;
 int statusLamp2 = 0;
 
+// timer lamp
+int timeLamp1;
+int timeLamp2;
+
 // The amount of time the ultrassonic wave will be travelling for
 long duration = 0;
 // Define the distance variable
@@ -52,7 +72,9 @@ double distance = 0;
 constexpr uint8_t irPin = D6;
 IRSamsungAc ac(irPin);
 int statusAc = 0;
-int p = 1;
+int acTemp;
+bool acTempStatus;
+bool p = false;
 
 void setup()
 {
@@ -76,6 +98,9 @@ void setup()
     Firebase.setInt("statusLamp1", 0);
     Firebase.setString("lampMode2", lampMode2);
     Firebase.setInt("statusLamp2", 0);
+    Firebase.setInt("timeLamp1", 0);
+    Firebase.setInt("timeLamp2", 0);
+
     Firebase.setInt("temperature", 0);
 
     // Ultrasonic sensor, set echo as Input and trigger as Output
@@ -90,7 +115,9 @@ void setup()
     // init ir
     ac.begin();
     Firebase.setInt("statusAc", statusAc);
-    Firebase.setInt("p",p);
+    Firebase.setInt("acTemp", 24);
+    Firebase.setBool("acTempStatus", false);
+    Firebase.setBool("p", false);
 }
 
 void loop()
@@ -98,14 +125,16 @@ void loop()
   // lampAuto(1);
   // lampAuto(2);
   // temp();
-  p = Firebase.getInt("p");
-  if (p == 0){
-    irRemote();
-    p++;
-    Firebase.setInt("p", p);
-    Serial.print("p : ");
-    Serial.println(p);
-  }
+  // p = Firebase.getBool("p");
+  // if (p == true){
+  //   irRemote();
+  //   Firebase.setBool("p", false);
+  //   Serial.print("p : ");
+  //   Serial.println(p);
+  // }
+  epochTime = getTime();
+  Serial.print("Epoch Time: ");
+  Serial.println(epochTime);
   delay(1000);
 }
 
@@ -181,6 +210,9 @@ void lampAuto(int i){
       }
     } 
     Firebase.setInt(fbStatus, statusLamp);
+  } else if(lampMode = "schedule"){
+    getTime();
+    
   }
  delay(1000);
 
@@ -199,7 +231,6 @@ void irRemote(){
   if (statusAc == 1){
     Serial.println("Turn on the A/C ...");
     ac.on();
-    ac.setTemp(19);
     ac.setMode(kSamsungAcCool);
     ac.setFan(kSamsungAcFanHigh);
     ac.send();
@@ -207,6 +238,13 @@ void irRemote(){
     Serial.println("Turn off the A/C ...");
     ac.off();
     ac.send();
+  } 
+  acTemp = Firebase.getInt("acTemp");
+  acTempStatus = Firebase.getBool("acTempStatus");
+  if (acTempStatus == true){
+    Serial.print("temperature :");
+    Serial.println(acTemp);
+    ac.setTemp(acTemp);
+    ac.send(); 
   }
-  
 }
