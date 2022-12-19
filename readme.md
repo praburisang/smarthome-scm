@@ -6,5 +6,7 @@ part use :
 
 required library : 
     1. firebase arduino
-    2. arduino json
-    3. max6675
+    2. arduino json 5.13.1 by bblanchon
+    3. max6675 by adafruit
+    4. irremote esp8266
+    
